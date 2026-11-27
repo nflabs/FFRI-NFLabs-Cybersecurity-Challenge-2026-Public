@@ -1,0 +1,8 @@
+services:
+  challenge:
+    build: .
+    ports:
+      - "25001:25001"
+    restart: always
+    environment:
+      - FLAG=flag{untrusted_fields_are_not_instructions}

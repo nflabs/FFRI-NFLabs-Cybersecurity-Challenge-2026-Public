@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Whereaboutsの写真の撮影地点を特定する問題です。">
+  <title>Photo Recovery | Whereabouts</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <main class="shell">
+    <header class="hero">
+      <a class="portal-link" href="/">← 問題選択へ戻る</a>
+      <p class="eyebrow">MISSION 02</p>
+      <h1>Photo Recovery</h1>
+      <p class="story">
+        日本国内を旅行中にカメラが壊れ、撮影した写真のうち5枚が失われてしまいました。
+        そこで、失われた5枚を記憶をもとにAIで復元しました。
+        次の6枚は、実際にカメラで撮影した写真1枚と、AIで復元した画像5枚です。
+      </p>
+      <div class="mission">
+        <span class="mission-label">MISSION</span>
+        <p>
+          6枚のうち、唯一実際にカメラで撮影した写真を特定し、その撮影地点の緯度・経度を答えてください。
+          回答は {緯度, 経度} の形式で入力してください。
+          緯度・経度ともに小数点以下2桁まで使用され、3桁目以降は切り捨てられます。
+        </p>
+      </div>
+    </header>
+
+    <section aria-labelledby="evidence-title">
+      <div class="section-heading">
+        <div>
+          <p class="section-number">01</p>
+          <h2 id="evidence-title">Evidence gallery</h2>
+        </div>
+        <p>画像をクリックすると別タブで表示します。</p>
+      </div>
+
+      <div class="gallery">
+        <a class="photo-card" href="images/photo_01.jpg" target="_blank" rel="noopener">
+          <img src="images/photo_01.jpg" alt="候補写真1" loading="lazy">
+          <span>PHOTO 01</span>
+        </a>
+        <a class="photo-card" href="images/photo_02.jpg" target="_blank" rel="noopener">
+          <img src="images/photo_02.jpg" alt="候補写真2" loading="lazy">
+          <span>PHOTO 02</span>
+        </a>
+        <a class="photo-card" href="images/photo_03.jpg" target="_blank" rel="noopener">
+          <img src="images/photo_03.jpg" alt="候補写真3" loading="lazy">
+          <span>PHOTO 03</span>
+        </a>
+        <a class="photo-card" href="images/photo_04.jpg" target="_blank" rel="noopener">
+          <img src="images/photo_04.jpg" alt="候補写真4" loading="lazy">
+          <span>PHOTO 04</span>
+        </a>
+        <a class="photo-card" href="images/photo_05.jpg" target="_blank" rel="noopener">
+          <img src="images/photo_05.jpg" alt="候補写真5" loading="lazy">
+          <span>PHOTO 05</span>
+        </a>
+        <a class="photo-card" href="images/photo_06.jpg" target="_blank" rel="noopener">
+          <img src="images/photo_06.jpg" alt="候補写真6" loading="lazy">
+          <span>PHOTO 06</span>
+        </a>
+      </div>
+    </section>
+
+    <section class="answer-section" aria-labelledby="answer-title">
+      <div class="section-heading">
+        <div>
+          <p class="section-number">02</p>
+          <h2 id="answer-title">Submit coordinates</h2>
+        </div>
+      </div>
+
+      <form id="answer-form" class="answer-form" novalidate>
+        <label for="answer">回答</label>
+        <div class="input-row">
+          <input
+            id="answer"
+            name="answer"
+            type="text"
+            inputmode="decimal"
+            autocomplete="off"
+            spellcheck="false"
+            placeholder="{00.00, 000.00}"
+            aria-describedby="format-note"
+            required
+          >
+          <button id="submit-button" type="submit">SUBMIT</button>
+        </div>
+        <p id="format-note" class="format-note">
+          形式：<code>{緯度, 経度}</code>（緯度・経度ともに小数点以下2桁まで使用され、3桁目以降は切り捨てられます。）
+        </p>
+        <p id="result" class="result" role="status" aria-live="polite"></p>
+      </form>
+
+    </section>
+  </main>
+
+</body>
+</html>

@@ -1,0 +1,24 @@
+services:
+  ollama:
+    build: ./ollama
+    restart: always
+
+  web:
+    build: ./web
+    restart: always
+    depends_on:
+      - ollama
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+      - MODEL=qwen2.5-coder:3b-instruct
+      - TEMPERATURE=0.1
+      - TOP_P=0.9
+      - SEED=42
+      - NUM_PREDICT=256
+      - KEEP_ALIVE=-1
+      - MAX_RETRY=2
+      - RESET_INTERVAL_SEC=600
+      - PULL_ON_START=0
+      - FLAG=flag{pr0mpt_rul3s_are_not_security_b0undaries}
+    ports:
+      - "25002:25002"

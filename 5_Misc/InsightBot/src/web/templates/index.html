@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SentinelOps InsightBot — SOC アナリティクス</title>
+<style>
+  :root{
+    color-scheme: dark;
+    --bg:#0a0e14; --panel:#111722; --panel2:#0d131d; --line:#1f2836;
+    --txt:#e6edf3; --muted:#8b98a9; --accent:#2dd4bf; --accent2:#38bdf8;
+    --danger:#ff6b6b; --warn:#f4bf4f; --ok:#3fb950; --sql:#7ee787;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0; font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
+    background:var(--bg); color:var(--txt);
+    display:grid; grid-template-columns:270px 1fr; grid-template-rows:100vh;
+  }
+  a{color:var(--accent2);}
+
+  aside{
+    background:linear-gradient(180deg,var(--panel),var(--panel2));
+    border-right:1px solid var(--line); padding:18px 16px; overflow-y:auto;
+  }
+  .brand{display:flex; align-items:center; gap:10px; margin-bottom:4px;}
+  .brand .logo{width:34px; height:34px; flex:0 0 34px;}
+  .brand h1{font-size:16px; margin:0; letter-spacing:.3px;}
+  .brand .sub{font-size:11px; color:var(--muted); margin-top:2px;}
+  .status{display:flex; align-items:center; gap:7px; font-size:12px; color:var(--muted); margin:14px 0 18px;}
+  .dot{width:8px; height:8px; border-radius:50%; background:var(--ok); box-shadow:0 0 8px var(--ok);}
+  .side-h{font-size:11px; text-transform:uppercase; letter-spacing:.12em; color:var(--muted); margin:16px 0 8px;}
+  .views{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:4px;}
+  .views li{
+    display:flex; align-items:center; gap:9px; padding:8px 10px; border-radius:8px;
+    font-size:13px; color:#c6d1de; background:#0e1521; border:1px solid var(--line);
+  }
+  .views li svg{width:15px; height:15px; color:var(--accent);}
+  .views li .cnt{margin-left:auto; font-size:11px; color:var(--muted);}
+  .note{font-size:11px; color:var(--muted); line-height:1.6; margin-top:16px; border-top:1px solid var(--line); padding-top:12px;}
+
+  main{display:flex; flex-direction:column; height:100vh; min-width:0;}
+  header.top{
+    display:flex; align-items:center; gap:12px; padding:14px 22px;
+    border-bottom:1px solid var(--line); background:rgba(13,19,29,.7); backdrop-filter:blur(6px);
+  }
+  header.top .title{font-size:15px; font-weight:600;}
+  header.top .badge{
+    font-size:10px; letter-spacing:.06em; padding:3px 8px; border-radius:999px;
+    background:rgba(45,212,191,.12); color:var(--accent); border:1px solid rgba(45,212,191,.35);
+  }
+  header.top .spacer{flex:1;}
+
+  #log{flex:1; overflow-y:auto; padding:22px; display:flex; flex-direction:column; gap:16px;}
+  .row{display:flex; gap:12px; max-width:900px;}
+  .row.user{align-self:flex-end; flex-direction:row-reverse;}
+  .avatar{
+    width:32px; height:32px; flex:0 0 32px; border-radius:9px; display:grid; place-items:center;
+    background:#0e1521; border:1px solid var(--line);
+  }
+  .avatar svg{width:18px; height:18px; color:var(--accent);}
+  .row.user .avatar{background:rgba(56,189,248,.12); border-color:rgba(56,189,248,.4);}
+  .row.user .avatar svg{color:var(--accent2);}
+  .bubble{
+    background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:12px 14px;
+    line-height:1.55; font-size:14px; min-width:0;
+  }
+  .row.user .bubble{background:rgba(56,189,248,.10); border-color:rgba(56,189,248,.28);}
+  .who{font-size:11px; color:var(--muted); margin-bottom:6px;}
+
+  .sqlbox{margin:8px 0;}
+  .sqlbox .lbl{font-size:10px; letter-spacing:.1em; color:var(--muted); text-transform:uppercase; margin-bottom:4px;}
+  .sql{
+    font-family:ui-monospace,"SFMono-Regular",Consolas,monospace; font-size:12.5px;
+    background:#080b11; color:var(--sql); padding:9px 11px; border-radius:8px;
+    border:1px solid var(--line); white-space:pre-wrap; overflow-x:auto;
+  }
+  .pill{display:inline-flex; align-items:center; gap:7px; font-weight:600; font-size:13px; padding:7px 11px; border-radius:8px;}
+  .pill.blocked{color:var(--danger); background:rgba(255,107,107,.1); border:1px solid rgba(255,107,107,.35);}
+  .pill.err{color:var(--warn); background:rgba(244,191,79,.1); border:1px solid rgba(244,191,79,.32);}
+
+  .tablewrap{overflow-x:auto; margin-top:8px; border:1px solid var(--line); border-radius:8px;}
+  table{border-collapse:collapse; width:100%; font-size:12.5px;}
+  th,td{padding:7px 10px; text-align:left; border-bottom:1px solid var(--line); white-space:nowrap;}
+  th{background:#0e1521; color:#aeb9c7; font-weight:600; position:sticky; top:0;}
+  tbody tr:nth-child(even){background:rgba(255,255,255,.02);}
+  td .sev-CRITICAL{color:var(--danger); font-weight:700;}
+  td .sev-HIGH{color:#ff9f43; font-weight:600;}
+  td .sev-MEDIUM{color:var(--warn);}
+  td .sev-LOW{color:var(--muted);}
+  .meta{font-size:11px; color:var(--muted); margin-top:6px;}
+
+  .typing{display:inline-flex; gap:4px; align-items:center;}
+  .typing span{width:6px; height:6px; border-radius:50%; background:var(--muted); animation:blink 1.2s infinite both;}
+  .typing span:nth-child(2){animation-delay:.2s;} .typing span:nth-child(3){animation-delay:.4s;}
+  @keyframes blink{0%,80%,100%{opacity:.25;} 40%{opacity:1;}}
+
+  .composer{border-top:1px solid var(--line); padding:12px 22px 16px; background:var(--panel2);}
+  .chips{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;}
+  .chip{
+    font-size:12px; padding:6px 11px; border-radius:999px; cursor:pointer;
+    background:#0e1521; color:#c6d1de; border:1px solid var(--line);
+  }
+  .chip:hover{border-color:var(--accent); color:var(--accent);}
+  form{display:flex; gap:9px;}
+  input[type=text]{
+    flex:1; padding:12px 14px; border-radius:10px; border:1px solid var(--line);
+    background:#0b1017; color:var(--txt); font-size:14px;
+  }
+  input[type=text]:focus{outline:none; border-color:var(--accent); box-shadow:0 0 0 3px rgba(45,212,191,.12);}
+  button{padding:12px 18px; border-radius:10px; border:0; cursor:pointer; font-size:14px; font-weight:600;}
+  #send{background:var(--accent); color:#04211d;}
+  #reset{background:#1c2634; color:#c6d1de;}
+  button:disabled{opacity:.5; cursor:default;}
+  .foot{font-size:11px; color:var(--muted); margin-top:9px;}
+
+  @media(max-width:760px){
+    body{grid-template-columns:1fr;}
+    aside{display:none;}
+  }
+</style>
+</head>
+<body>
+<aside>
+  <div class="brand">
+    <svg class="logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" style="color:var(--accent)">
+      <path d="M12 2 4 5v6c0 5 3.4 8.5 8 11 4.6-2.5 8-6 8-11V5l-8-3Z"/>
+      <path d="m9 12 2 2 4-4" stroke="var(--accent2)"/>
+    </svg>
+    <div>
+      <h1>SentinelOps</h1>
+      <div class="sub">InsightBot · SOC Analytics</div>
+    </div>
+  </div>
+  <div class="status"><span class="dot"></span> SOC データマートに接続中</div>
+
+  <div class="side-h">利用可能なデータビュー</div>
+  <ul class="views">
+    <li>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="4" width="18" height="6" rx="1"/><rect x="3" y="14" width="18" height="6" rx="1"/></svg>
+      assets <span class="cnt">資産</span>
+    </li>
+    <li>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="m2 17 10 5 10-5"/></svg>
+      findings <span class="cnt">脆弱性</span>
+    </li>
+    <li>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      scans <span class="cnt">スキャン</span>
+    </li>
+    <li>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M16 20v-2a4 4 0 0 0-8 0v2"/><circle cx="12" cy="7" r="3.5"/></svg>
+      customers <span class="cnt">顧客</span>
+    </li>
+    <li>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>
+      incidents <span class="cnt">インシデント</span>
+    </li>
+  </ul>
+
+  <div class="note">
+    自然言語で質問すると InsightBot が SQL を生成し、SOC データマートに問い合わせて結果を表で返します。
+  </div>
+</aside>
+
+<main>
+  <header class="top">
+    <span class="title">InsightBot コンソール</span>
+    <span class="badge">v0.9 INTERNAL BETA</span>
+    <span class="spacer"></span>
+    <span style="font-size:12px;color:var(--muted)">read-only analytics</span>
+  </header>
+
+  <div id="log"></div>
+
+  <div class="composer">
+    <div class="chips" id="chips"></div>
+    <form id="form">
+      <input id="q" type="text" autocomplete="off" placeholder="例: 資産一覧を見せて" />
+      <button id="send" type="submit">送信</button>
+      <button id="reset" type="button">リセット</button>
+    </form>
+    <div class="foot">応答はローカル LLM による生成のため数秒〜数十秒かかることがあります。起動直後の初回のみ、モデル読み込みのため数分かかったり一時的にエラーになることがあります。その場合は少し待って再度お試しください。</div>
+  </div>
+</main>
+
+<script>
+  const logEl=document.getElementById('log');
+  const form=document.getElementById('form');
+  const input=document.getElementById('q');
+  const sendBtn=document.getElementById('send');
+  const resetBtn=document.getElementById('reset');
+  const chipsEl=document.getElementById('chips');
+
+  const SUGGESTIONS=[
+    "資産一覧を見せて",
+    "脆弱性の一覧を見せて",
+    "severity が CRITICAL の findings を見せて",
+    "インシデントを全部見せて",
+    "顧客を全部見せて",
+  ];
+
+  const BOT_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 2 4 5v6c0 5 3.4 8.5 8 11 4.6-2.5 8-6 8-11V5l-8-3Z"/></svg>';
+  const USER_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M16 20v-2a4 4 0 0 0-8 0v2"/><circle cx="12" cy="7" r="3.5"/></svg>';
+
+  function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+  function scrollDown(){logEl.scrollTop=logEl.scrollHeight;}
+
+  function makeRow(kind){
+    const row=document.createElement('div'); row.className='row '+kind;
+    const av=document.createElement('div'); av.className='avatar';
+    av.innerHTML = kind==='user'?USER_SVG:BOT_SVG;
+    const bub=document.createElement('div'); bub.className='bubble';
+    if(kind!=='user'){const who=document.createElement('div');who.className='who';who.textContent='InsightBot';bub.appendChild(who);}
+    row.appendChild(av); row.appendChild(bub);
+    logEl.appendChild(row); scrollDown();
+    return bub;
+  }
+
+  function addUser(text){const b=makeRow('user'); b.appendChild(document.createTextNode(text));}
+
+  function sevCell(v){
+    const s=String(v);
+    if(['CRITICAL','HIGH','MEDIUM','LOW'].includes(s)) return '<span class="sev-'+s+'">'+s+'</span>';
+    return esc(s);
+  }
+  function renderTable(columns,rows){
+    if(!columns.length) return '<div class="meta">(結果は空です)</div>';
+    let h='<div class="tablewrap"><table><thead><tr>';
+    h+=columns.map(c=>'<th>'+esc(c)+'</th>').join('')+'</tr></thead><tbody>';
+    for(const r of rows){h+='<tr>'+r.map(v=>'<td>'+sevCell(v)+'</td>').join('')+'</tr>';}
+    h+='</tbody></table></div>';
+    h+='<div class="meta">'+rows.length+' 行</div>';
+    return h;
+  }
+
+  function renderBot(bub,data){
+    if(data.sql){
+      const box=document.createElement('div'); box.className='sqlbox';
+      box.innerHTML='<div class="lbl">生成された SQL</div><div class="sql">'+esc(data.sql)+'</div>';
+      bub.appendChild(box);
+    }
+    if(data.error){
+      const p=document.createElement('div'); p.className='pill err'; p.textContent='⚠ '+data.error; bub.appendChild(p);
+    }else if(data.blocked){
+      const p=document.createElement('div'); p.className='pill blocked'; p.textContent='⛔ '+(data.message||'Blocked: unsafe query'); bub.appendChild(p);
+    }else{
+      bub.insertAdjacentHTML('beforeend',renderTable(data.columns||[],data.rows||[]));
+    }
+    scrollDown();
+  }
+
+  async function submitQuestion(q){
+    if(!q) return;
+    addUser(q);
+    const bub=makeRow('bot');
+    const typing=document.createElement('div'); typing.className='typing';
+    typing.innerHTML='<span></span><span></span><span></span>';
+    bub.appendChild(typing);
+    sendBtn.disabled=true; sendBtn.textContent='生成中…';
+    try{
+      const res=await fetch('/ask',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:q})});
+      const data=await res.json();
+      typing.remove();
+      renderBot(bub,data);
+    }catch(e){
+      typing.remove();
+      renderBot(bub,{error:'通信エラーが発生しました。'});
+    }finally{
+      sendBtn.disabled=false; sendBtn.textContent='送信'; input.focus();
+    }
+  }
+
+  form.addEventListener('submit',e=>{e.preventDefault(); const q=input.value.trim(); input.value=''; submitQuestion(q);});
+  resetBtn.addEventListener('click',async()=>{
+    await fetch('/reset',{method:'POST'});
+    logEl.innerHTML='';
+    const b=makeRow('bot'); b.appendChild(document.createTextNode('セッションと SOC データマートを初期状態にリセットしました。'));
+  });
+
+  SUGGESTIONS.forEach(s=>{
+    const c=document.createElement('span'); c.className='chip'; c.textContent=s;
+    c.addEventListener('click',()=>submitQuestion(s));
+    chipsEl.appendChild(c);
+  });
+
+  (function(){
+    const b=makeRow('bot');
+    b.insertAdjacentHTML('beforeend',
+      'SentinelOps SOC アナリティクスへようこそ。資産・脆弱性・スキャン・顧客・インシデントについて自然言語で質問してください。下の候補からも試せます。');
+  })();
+</script>
+</body>
+</html>

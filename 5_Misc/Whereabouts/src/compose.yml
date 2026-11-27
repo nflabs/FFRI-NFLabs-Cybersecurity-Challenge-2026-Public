@@ -1,0 +1,6 @@
+services:
+  challenge:
+    build: .
+    ports:
+      - "25000:25000"
+    restart: always
